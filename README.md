@@ -18,7 +18,7 @@ MPEG-TSファイルに含まれるSDT（Service Description Table）とEIT（Eve
 ### 1. リポジトリのクローン
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/noshiket/tseit_trimmer
 cd tseit_trimmer
 ```
 
