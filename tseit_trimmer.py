@@ -34,7 +34,7 @@ SDT_TABLE_ID = 0x42
 EIT_PF_ACTUAL_TABLE_ID = 0x4E  # Present/Following
 TOT_TABLE_ID = 0x73
 
-# ARIB STD-B10 ジャンルコード（大分類）
+# ジャンルコード（大分類）
 ARIB_GENRE_LARGE = {
     0x0: "ニュース/報道",
     0x1: "スポーツ",
@@ -54,7 +54,7 @@ ARIB_GENRE_LARGE = {
     0xF: "その他",
 }
 
-# ARIB STD-B10 コンポーネントタイプ（映像）
+# コンポーネントタイプ（映像）
 # stream_content = 0x01
 COMPONENT_TYPE_VIDEO = {
     0x01: {"resolution": "480i (525i)", "aspect": "4:3", "pan_vector": False},
@@ -92,7 +92,7 @@ COMPONENT_TYPE_VIDEO = {
     0xF4: {"resolution": "180p", "aspect": "> 16:9", "pan_vector": False},
 }
 
-# ARIB STD-B10 コンポーネントタイプ（音声）
+# コンポーネントタイプ（音声）
 # stream_content = 0x02
 COMPONENT_TYPE_AUDIO = {
     0x01: {"mode": "1/0モード（シングルモノ）", "sampling": "48kHz", "quality": "モード1"},
@@ -116,7 +116,7 @@ COMPONENT_TYPE_AUDIO = {
     0x41: {"mode": "聴覚障害者用音声", "sampling": "48kHz", "quality": "モード1"},
 }
 
-# ARIB STD-B10 ジャンルコード（中分類）
+# ジャンルコード（中分類）
 ARIB_GENRE_MIDDLE = {
     # 0x0: ニュース/報道
     0x00: {0x0: "定時・総合", 0x1: "天気", 0x2: "特集・ドキュメント", 0x3: "政治・国会",
