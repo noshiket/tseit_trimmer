@@ -120,6 +120,49 @@ JSON出力例：
           "title": "番組タイトル",
           "description": "番組の説明文",
           "extended_info": "番組内容: ...\n出演者: ..."
+          "genres": [
+            {
+              "large_code": 7,
+              "large_name": "アニメ/特撮",
+              "middle_code": 0,
+              "middle_name": "国内アニメ"
+            },
+            {
+              "large_code": 8,
+              "large_name": "ドキュメンタリー/教養",
+              "middle_code": 1,
+              "middle_name": "歴史・紀行"
+            }
+          ],
+          "components": [
+            {
+              "stream_content": 1,
+              "component_type": 179,
+              "component_tag": 0,
+              "language": "jpn",
+              "text": "",
+              "details": {
+                "resolution": "1080i (1125i)",
+                "aspect": "16:9",
+                "pan_vector": false
+              }
+            },
+            {
+              "stream_content": 2,
+              "component_type": 3,
+              "component_tag": 16,
+              "stream_type": 15,
+              "language": "jpn",
+              "sampling_rate": "48kHz",
+              "main_component": true,
+              "text": "",
+              "details": {
+                "mode": "2/0モード（ステレオ）",
+                "sampling": "48kHz",
+                "quality": "モード1"
+              }
+            }
+          ]
         }
       ]
     }
