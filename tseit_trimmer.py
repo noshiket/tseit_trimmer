@@ -385,51 +385,72 @@ class DescriptorParser:
         return event_name, text
 
     @staticmethod
-    def parse_extended_event_descriptor(data: bytes) -> str:
+    def parse_extended_event_descriptor_raw(data: bytes) -> turple:
         if len(data) < 6:
-            return ""
+            return b"", b""
         
         offset = 1 # descriptor_number
         offset += 3 # ISO_639_language_code
-        length_of_items = data[offset]
+        # アイテム部の抽出
+        item_len = data[offset]
         offset += 1
-        items_end = offset + length_of_items
+        item_bytes = data[offset:offset + item_len]
+        offset += item_len
         
-        items_text = []
-        while offset + 2 <= items_end:
-            item_description_length = data[offset]
-            offset += 1
-            item_description_bytes = data[offset:offset + item_description_length]
-            offset += item_description_length
-            
-            item_length = data[offset]
-            offset += 1
-            item_bytes = data[offset:offset + item_length]
-            offset += item_length
-
-            item_description = ARIBStringDecoder.decode(item_description_bytes)
-            item_text = ARIBStringDecoder.decode(item_bytes)
-
-            if item_description:
-                # 項目名がある場合は、その前に改行2つ(空行)を入れる
-                # (EITParserで "".join() するため、ここが項目区切りになる)
-                items_text.append(f"\n\n[{item_description}]\n{item_text}")
-            else:
-                # 項目名がない（前のデータの続き）場合はそのまま結合
-                items_text.append(item_text)
-
-        if offset < len(data):
-            text_length = data[offset]
-            offset += 1
-            if offset + text_length <= len(data):
-                text_bytes = data[offset:offset + text_length]
-                extra_text = ARIBStringDecoder.decode(text_bytes)
-                if extra_text:
-                    items_text.append(extra_text)
+        # テキスト部の抽出
+        text_len = data[offset] if offset < len(data) else 0
+        offset += 1
+        text_bytes = data[offset:offset + text_len] if text_len > 0 else b""
 
         # ここでは改行を挟まずに結合する
-        return "".join(items_text)
+        return item_bytes, text_bytes
 
+    @staticmethod
+    def decode_combined_extended_info(item_payload: bytes, text_payload: bytes) -> str:
+        """連結されたバイナリを解析し、アイテム名と本文を組み合わせて文字列にする"""
+        results = []
+        item_list = [] # [[name_bytes, content_bytes], ...]
+        
+        # 1. アイテム部の解析 (バイナリのまま項目ごとに集約)
+        offset = 0
+        while offset < len(item_payload):
+            try:
+                if offset >= len(item_payload): break
+                name_len = item_payload[offset]
+                offset += 1
+                name_bytes = item_payload[offset:offset + name_len]
+                offset += name_len
+                
+                if offset >= len(item_payload): break
+                content_len = item_payload[offset]
+                offset += 1
+                content_bytes = item_payload[offset:offset + content_len]
+                offset += content_len
+                
+                # 重要：名前長が0なら前の項目の続きとして結合する
+                if name_len > 0 or not item_list:
+                    item_list.append([name_bytes, content_bytes])
+                else:
+                    item_list[-1][1] += content_bytes
+            except:
+                break
+                
+        # 2. まとまったバイナリをデコード
+        for n_b, c_b in item_list:
+            n_str = ARIBStringDecoder.decode(n_b)
+            c_str = ARIBStringDecoder.decode(c_b)
+            if n_str:
+                results.append(f"[{n_str}]\n{c_str}")
+            else:
+                results.append(c_str)
+            
+        # 3. テキスト部（番組説明の続きなど）のデコード
+        if text_payload:
+            t_str = ARIBStringDecoder.decode(text_payload)
+            if t_str:
+                results.append(t_str)
+            
+        return "\n".join(results)
     @staticmethod
     def parse_component_descriptor(data: bytes) -> Dict[str, any]:
         """
@@ -735,6 +756,8 @@ class EITParser:
             extended_dict = {}
             genres = []
             components = []
+            ext_items_raw = {}
+            ext_texts_raw = {}
 
             # 記述子ループ
             while offset + 2 <= desc_end:
@@ -747,8 +770,9 @@ class EITParser:
                     title, description = DescriptorParser.parse_short_event_descriptor(desc_data)
                 elif desc_tag == 0x4E:  # Extended event
                     desc_num = (desc_data[0] >> 4) & 0x0F
-                    ext_text = DescriptorParser.parse_extended_event_descriptor(desc_data)
-                    extended_dict[desc_num] = ext_text
+                    i_b, t_b = DescriptorParser.parse_extended_event_descriptor_raw(desc_data)
+                    ext_items_raw[desc_num] = i_b
+                    ext_texts_raw[desc_num] = t_b
                 elif desc_tag == 0x54:  # Content (Genre)
                     genres = DescriptorParser.parse_content_descriptor(desc_data)
                 elif desc_tag == 0x50:  # Component (Video)
@@ -757,9 +781,11 @@ class EITParser:
                     components.append(DescriptorParser.parse_audio_component_descriptor(desc_data))
 
                 offset += desc_length
-
+            # 全ての記述子ループが終わった後、連結して一括デコード
+            combined_items = b"".join([ext_items_raw[k] for k in sorted(ext_items_raw.keys())])
+            combined_texts = b"".join([ext_texts_raw[k] for k in sorted(ext_texts_raw.keys())])
             # 複数の拡張形式イベント記述子を番号順に空文字で連結し、最後に前後の余白を削る
-            extended_info = "".join([extended_dict[k] for k in sorted(extended_dict.keys())]).strip()
+            extended_info = DescriptorParser.decode_combined_extended_info(combined_items, combined_texts)
 
             events.append((event_id, start_time, duration_min, title, description, extended_info, genres, components))
             offset = desc_end
